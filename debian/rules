@@ -1,0 +1,30 @@
+#!/usr/bin/make -f
+
+# PKD   = $(word 1,$(abspath $(dir $(MAKEFILE_LIST))))
+# PKG   = $(word 2,$(shell dpkg-parsechangelog -l$(PKD)/changelog | grep ^Source))
+# UVER  = $(shell dpkg-parsechangelog -l$(PKD)/changelog | perl -ne 'print $$1 if m{^Version:\s+(?:\d+:)?(\d.*)(?:\-\d+.*)};')
+# DTYPE = +dfsg1
+# VER  ?= $(subst $(DTYPE),,$(UVER))
+
+DHFLAGS=--parallel
+
+%:
+	dh $@ $(DHFLAGS) --with python2
+
+override_dh_install:
+	rm -rfv debian/tmp/usr/lib/*/pluma/plugins/*.la
+	dh_install --list-missing
+
+override_dh_auto_configure:
+	# upstream tarball is without configure. autogen.sh will create it
+	./autogen.sh
+	dh_auto_configure $(DHFLAGS) -- \
+		--disable-silent-rules \
+		--libexecdir=/usr/lib/ \
+		--enable-python \
+
+override_dh_auto_test:
+	DEB_BUILD_OPTIONS=nocheck dh_auto_test
+
+override_dh_strip:
+	dh_strip --dbg-package=pluma-plugins-dbg
