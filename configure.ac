@@ -3,12 +3,12 @@ dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.59)
  
 m4_define(pluma_plugins_major_version,  1)
-m4_define(pluma_plugins_minor_version,  8)
+m4_define(pluma_plugins_minor_version,  16)
 m4_define(pluma_plugins_micro_version,  0)
 m4_define(pluma_plugins_version, pluma_plugins_major_version.pluma_plugins_minor_version.pluma_plugins_micro_version)
 
 AC_INIT(pluma-plugins, pluma_plugins_version,
-        http://github.com/cygwinports/pluma-plugins/issues,
+        http://github.com/yselkowitz/pluma-plugins/issues,
         pluma-plugins)
 
 AC_CONFIG_SRCDIR([plugins])
@@ -62,9 +62,9 @@ AM_GLIB_GNU_GETTEXT
 PKG_CHECK_MODULES(PLUMA, [
 	glib-2.0 >= 2.26.0
 	gio-2.0 >= 2.26.0
-	gtk+-2.0 >= 2.13.0
-	gtksourceview-2.0 >= 2.9.1
-	pluma >= 1.2.0
+	gtk+-3.0
+	gtksourceview-3.0
+	pluma >= 1.16.0
 ])
 
 # ================================================================
@@ -78,7 +78,7 @@ GLIB_GSETTINGS
 # ================================================================
 
 #FIXME
-PLUMA_HAS_PYTHON=1
+#PLUMA_HAS_PYTHON=1
 #/FIXME
 
 AC_MSG_CHECKING([which plugins to build])
@@ -317,7 +317,7 @@ plugin_defined charmap
 if test "$?" = 1
 then
 	PKG_CHECK_MODULES([GUCHARMAP],
-		[gucharmap-2],
+		[gucharmap-2.90],
 		[have_gucharmap=yes],[have_gucharmap=no])
 
 	AC_SUBST([GUCHARMAP_CFLAGS])
