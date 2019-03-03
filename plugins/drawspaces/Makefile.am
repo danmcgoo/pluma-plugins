@@ -23,20 +23,18 @@ ui_DATA = drawspaces.ui
 
 plugin_in_files = drawspaces.pluma-plugin.desktop.in
 
-%.pluma-plugin: %.pluma-plugin.desktop.in $(INTLTOOL_MERGE) $(wildcard $(top_srcdir)/po/*po) ; $(INTLTOOL_MERGE) $(top_srcdir)/po $< $@ -d -u -c $(top_builddir)/po/.intltool-merge-cache
+%.plugin: %.pluma-plugin.desktop.in $(INTLTOOL_MERGE) $(wildcard $(top_srcdir)/po/*po) ; $(INTLTOOL_MERGE) $(top_srcdir)/po $< $@ -d -u -c $(top_builddir)/po/.intltool-merge-cache
 
-plugin_DATA = $(plugin_in_files:.pluma-plugin.desktop.in=.pluma-plugin)
+plugin_DATA = $(plugin_in_files:.pluma-plugin.desktop.in=.plugin)
 
-gsettings_SCHEMAS = org.mate.pluma.plugins.drawspaces.gschema.xml
 @INTLTOOL_XML_NOMERGE_RULE@
+drawspaces_gschema_in = org.mate.pluma.plugins.drawspaces.gschema.xml.in
+gsettings_SCHEMAS = $(drawspaces_gschema_in:.xml.in=.xml)
 @GSETTINGS_RULES@
 
-convertdir = $(datadir)/MateConf/gsettings
-convert_DATA = pluma-plugins-drawspaces.convert
+EXTRA_DIST = $(ui_DATA) $(plugin_in_files) $(drawspaces_gschema_in)
 
-EXTRA_DIST = $(ui_DATA) $(convert_DATA)
-
-CLEANFILES = $(plugin_DATA) $(gsettings_SCHEMAS)
-DISTCLEANFILES = $(plugin_DATA) $(gsettings_SCHEMAS)
+CLEANFILES = $(plugin_DATA) $(drawspaces_gschema_in) $(gsettings_SCHEMAS)
+DISTCLEANFILES = $(plugin_DATA) $(drawspaces_gschema_in) $(gsettings_SCHEMAS)
 
 -include $(top_srcdir)/git.mk

@@ -6,12 +6,10 @@ Standards-Version: 3.9.2
 Build-Depends: debhelper (>=9),
                mate-common,
                libglib2.0-dev,
-               libgtksourceview2.0-dev,
-               libgtk2.0-dev,
+               libgtksourceview-3.0-dev,
+               libgtk-3-dev,
                pluma-dev,
-               python-dev,
-               python-gtk2-dev,
-               python-gtksourceview2,
+               libpeas-dev,
 
 Package: pluma-plugins
 Architecture: any

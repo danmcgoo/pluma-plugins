@@ -20,15 +20,18 @@
 #include <config.h>
 #endif
 
-#include "pluma-drawspaces-plugin.h"
-
 #include <glib/gi18n-lib.h>
+#include <libpeas/peas-activatable.h>
+#include <libpeas-gtk/peas-gtk-configurable.h>
+
 #include <pluma/pluma-app.h>
 #include <pluma/pluma-debug.h>
 #include <pluma/pluma-window.h>
 #include <pluma/pluma-view.h>
 #include <pluma/pluma-tab.h>
 #include <pluma/pluma-utils.h>
+
+#include "pluma-drawspaces-plugin.h"
 
 #define DRAWSPACES_SETTINGS_BASE   "org.mate.pluma.plugins.drawspaces"
 #define SETTINGS_KEY_ENABLE        "enable"
@@ -50,10 +53,27 @@
 				PlumaDrawspacesPluginPrivate))
 
 
-PLUMA_PLUGIN_REGISTER_TYPE (PlumaDrawspacesPlugin, pluma_drawspaces_plugin)
+enum {
+	PROP_0,
+	PROP_OBJECT
+};
+
+static void peas_activatable_iface_init (PeasActivatableInterface *iface);
+static void peas_gtk_configurable_iface_init (PeasGtkConfigurableInterface *iface);
+
+G_DEFINE_DYNAMIC_TYPE_EXTENDED (PlumaDrawspacesPlugin,
+				pluma_drawspaces_plugin,
+				PEAS_TYPE_EXTENSION_BASE,
+				0,
+				G_IMPLEMENT_INTERFACE_DYNAMIC (PEAS_TYPE_ACTIVATABLE,
+							       peas_activatable_iface_init)
+				G_IMPLEMENT_INTERFACE_DYNAMIC (PEAS_GTK_TYPE_CONFIGURABLE,
+							       peas_gtk_configurable_iface_init))
 
 struct _PlumaDrawspacesPluginPrivate
 {
+	GtkWidget *window;
+
 	GSettings *settings;
 
 	GtkSourceDrawSpacesFlags flags;
@@ -143,9 +163,13 @@ on_active_toggled (GtkToggleAction *action,
 
 static const GtkToggleActionEntry action_entries[] =
 {
-	{ "DrawSpaces", NULL, N_("Show _White Space"), NULL,
-	 N_("Show spaces and tabs"),
-	 G_CALLBACK (on_active_toggled)},
+	{ "DrawSpaces",
+	  NULL,
+	  N_("Show _White Space"),
+	  NULL,
+	  N_("Show spaces and tabs"),
+	  G_CALLBACK (on_active_toggled)
+	},
 };
 
 static void
@@ -361,10 +385,10 @@ get_config_options (WindowData *data,
 }
 
 static void
-impl_activate (PlumaPlugin *plugin,
-	       PlumaWindow *window)
+pluma_drawspaces_plugin_activate(PeasActivatable *activatable)
 {
 	PlumaDrawspacesPlugin *ds_plugin;
+	PlumaWindow *window;
 	GtkUIManager *manager;
 	GError *error = NULL;
 	GtkAction *action;
@@ -373,7 +397,8 @@ impl_activate (PlumaPlugin *plugin,
 
 	pluma_debug (DEBUG_PLUGINS);
 
-	ds_plugin = PLUMA_DRAWSPACES_PLUGIN (plugin);
+	ds_plugin = PLUMA_DRAWSPACES_PLUGIN (activatable);
+	window = PLUMA_WINDOW (ds_plugin->priv->window);
 
 	data = g_slice_new (WindowData);
 	action_data = g_slice_new (ActionData);
@@ -429,10 +454,10 @@ impl_activate (PlumaPlugin *plugin,
 }
 
 static void
-impl_deactivate	(PlumaPlugin *plugin,
-		 PlumaWindow *window)
+pluma_drawspaces_plugin_deactivate (PeasActivatable *activatable)
 {
-	PlumaDrawspacesPlugin *ds_plugin = PLUMA_DRAWSPACES_PLUGIN (plugin);
+	PlumaDrawspacesPlugin *ds_plugin = PLUMA_DRAWSPACES_PLUGIN (activatable);
+	PlumaWindow *window = PLUMA_WINDOW (ds_plugin->priv->window);
 	GtkUIManager *manager;
 	WindowData *data;
 
@@ -481,7 +506,7 @@ get_configuration_dialog (PlumaDrawspacesPlugin *plugin)
 
 	dialog = g_slice_new (DrawspacesConfigureDialog);
 
-	datadir = pluma_plugin_get_data_dir (PLUMA_PLUGIN (plugin));
+	datadir = peas_extension_base_get_data_dir (PEAS_EXTENSION_BASE (plugin));
 	filename = g_build_filename (datadir, UI_FILE, NULL);
 
 	ret = pluma_utils_get_ui_objects (filename,
@@ -579,11 +604,11 @@ get_configuration_dialog (PlumaDrawspacesPlugin *plugin)
 }
 
 static GtkWidget *
-impl_create_configure_dialog (PlumaPlugin *plugin)
+pluma_drawspaces_plugin_create_configure_dialog (PeasGtkConfigurable *configurable)
 {
 	DrawspacesConfigureDialog *dialog;
 
-	dialog = get_configuration_dialog (PLUMA_DRAWSPACES_PLUGIN (plugin));
+	dialog = get_configuration_dialog (PLUMA_DRAWSPACES_PLUGIN (configurable));
 
 	g_signal_connect (dialog->dialog,
 			  "response",
@@ -594,16 +619,91 @@ impl_create_configure_dialog (PlumaPlugin *plugin)
 }
 
 static void
+pluma_drawspaces_plugin_set_property (GObject      *object,
+				      guint         prop_id,
+				      const GValue *value,
+				      GParamSpec   *pspec)
+{
+	PlumaDrawspacesPlugin *plugin = PLUMA_DRAWSPACES_PLUGIN (object);
+
+	switch (prop_id)
+	{
+		case PROP_OBJECT:
+			plugin->priv->window = GTK_WIDGET (g_value_dup_object (value));
+			break;
+
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
+}
+
+static void
+pluma_drawspaces_plugin_get_property (GObject    *object,
+				      guint       prop_id,
+				      GValue     *value,
+				      GParamSpec *pspec)
+{
+	PlumaDrawspacesPlugin *plugin = PLUMA_DRAWSPACES_PLUGIN (object);
+
+	switch (prop_id)
+	{
+		case PROP_OBJECT:
+			g_value_set_object (value, plugin->priv->window);
+			break;
+
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
+}
+
+static void
 pluma_drawspaces_plugin_class_init (PlumaDrawspacesPluginClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
-	PlumaPluginClass *plugin_class = PLUMA_PLUGIN_CLASS (klass);
+
+	// object_class->finalize = pluma_drawspaces_plugin_finalize;
+	object_class->dispose = pluma_drawspaces_plugin_dispose;
+	object_class->set_property = pluma_drawspaces_plugin_set_property;
+	object_class->get_property = pluma_drawspaces_plugin_get_property;
+
+	g_object_class_override_property (object_class, PROP_OBJECT, "object");
 
 	g_type_class_add_private (object_class, sizeof (PlumaDrawspacesPluginPrivate));
-
-	object_class->dispose = pluma_drawspaces_plugin_dispose;
-
-	plugin_class->activate = impl_activate;
-	plugin_class->deactivate = impl_deactivate;
-	plugin_class->create_configure_dialog = impl_create_configure_dialog;
 }
+
+static void
+pluma_drawspaces_plugin_class_finalize (PlumaDrawspacesPluginClass *klass)
+{
+	/* dummy function - used by G_DEFINE_DYNAMIC_TYPE_EXTENDED */
+}
+
+static void
+peas_activatable_iface_init (PeasActivatableInterface *iface)
+{
+	iface->activate = pluma_drawspaces_plugin_activate;
+	iface->deactivate = pluma_drawspaces_plugin_deactivate;
+	// iface->update_state = pluma_drawspaces_plugin_state;
+}
+
+static void
+peas_gtk_configurable_iface_init (PeasGtkConfigurableInterface *iface)
+{
+	iface->create_configure_widget = pluma_drawspaces_plugin_create_configure_dialog;
+}
+
+G_MODULE_EXPORT void
+peas_register_types (PeasObjectModule *module)
+{
+	pluma_drawspaces_plugin_register_type (G_TYPE_MODULE (module));
+
+	peas_object_module_register_extension_type (module,
+						    PEAS_TYPE_ACTIVATABLE,
+						    PLUMA_TYPE_DRAWSPACES_PLUGIN);
+
+	peas_object_module_register_extension_type (module,
+						    PEAS_GTK_TYPE_CONFIGURABLE,
+						    PLUMA_TYPE_DRAWSPACES_PLUGIN);
+}
+
